@@ -7,8 +7,7 @@ import io.reactivex.disposables.Disposable
 import io.reactivex.functions.Consumer
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.ReplaySubject
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.rx2.asObservable
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert
@@ -270,11 +269,14 @@ data class TimeoutConfig(
  *
  * @see FlowEmissionHistory
  */
-fun <T> Flow<T>.testOverTime(
+fun <T : Any> Flow<T>.testOverTime(
     timeoutConfig: TimeoutConfig = TimeoutConfig.default()
 ): FlowEmissionHistory<T> = FlowEmissionHistory(
     timeoutConfig = timeoutConfig,
-    observable = Observable.create { emitter ->
+    observable = this.asObservable()
+/*
+
+    Observable.create { emitter ->
         val flow = this
 
         try {
@@ -293,6 +295,7 @@ fun <T> Flow<T>.testOverTime(
             emitter.onError(t)
         }
     }
+ */
 )
 
 /**
