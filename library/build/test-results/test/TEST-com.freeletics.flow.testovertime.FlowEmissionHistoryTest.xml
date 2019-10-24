@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.freeletics.flow.testovertime.FlowEmissionHistoryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2019-10-24T09:26:39" hostname="Mac-Pro-M-059" time="0.181">
+  <properties/>
+  <testcase name="timeout throws exception" classname="com.freeletics.flow.testovertime.FlowEmissionHistoryTest" time="0.165"/>
+  <testcase name="on shouldEmitNoMoreValues throws exception on unchecked items left" classname="com.freeletics.flow.testovertime.FlowEmissionHistoryTest" time="0.012"/>
+  <testcase name="shouldNotHaveEmittedSinceLastCheck works even without any emission" classname="com.freeletics.flow.testovertime.FlowEmissionHistoryTest" time="0.001"/>
+  <testcase name="emissions recorded and checked" classname="com.freeletics.flow.testovertime.FlowEmissionHistoryTest" time="0.001"/>
+  <testcase name="once disposeAndCleanUp has been called shouldNotHaveEmittedSinceLastCheck throws exception" classname="com.freeletics.flow.testovertime.FlowEmissionHistoryTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
