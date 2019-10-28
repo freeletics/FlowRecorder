@@ -109,7 +109,7 @@ class FlowEmissionRecorder<T> internal constructor(
  */
 fun <T> Flow<T>.record(
     emissionTimeoutMilliseconds: Long = 5000,
-    coroutineScopeToLaunchFlowIn: CoroutineScope = GlobalScope + Dispatchers.IO
+    coroutineScopeToLaunchFlowIn: CoroutineScope = GlobalScope
 ): FlowEmissionRecorder<T> =
     FlowEmissionRecorder(
         flowToObserve = this,
