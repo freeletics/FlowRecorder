@@ -1,15 +1,9 @@
 package com.freeletics.flow.testovertime
 
-import io.reactivex.Observable
-import io.reactivex.ObservableEmitter
-import io.reactivex.schedulers.TestScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.AssertionError
 
@@ -44,21 +38,21 @@ class FlowEmissionRecorderTest {
     }
 
     @Test
-    fun `late emissions are forwarded and checked`() {
+    fun `deferred emissions are forwarded and checked`() {
 
         val emissions = flow {
             emit(1)
-            delay(500)
+            delay(50)
             emit(2)
-            delay(500)
+            delay(50)
             emit(3)
-            delay(2000)
+            delay(50)
+            emit(4)
         }.record()
 
         emissions shouldEmitNext 1
         emissions shouldEmitNext 2
-        emissions shouldEmitNext 3
-
-
+        emissions.shouldEmitNext(3, 4)
     }
+
 }
