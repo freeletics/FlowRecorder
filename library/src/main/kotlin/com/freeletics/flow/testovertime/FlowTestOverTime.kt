@@ -273,29 +273,7 @@ fun <T : Any> Flow<T>.testOverTime(
     timeoutConfig: TimeoutConfig = TimeoutConfig.default()
 ): FlowEmissionHistory<T> = FlowEmissionHistory(
     timeoutConfig = timeoutConfig,
-    observable = this.asObservable()
-/*
-
-    Observable.create { emitter ->
-        val flow = this
-
-        try {
-
-            runBlocking {
-                flow.collect {
-                    if (!emitter.isDisposed) {
-                        emitter.onNext(it)
-                    }
-                }
-            }
-            emitter.onComplete()
-
-
-        } catch (t: Throwable) {
-            emitter.onError(t)
-        }
-    }
- */
+    observable = this.asObservable() 
 )
 
 /**
