@@ -8,9 +8,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.junit.Assert
 
-class FlowEmissionRecorder<T>(
+class FlowEmissionRecorder<T> internal constructor(
     flowToObserve: Flow<T>,
-    coroutineScope: CoroutineScope = GlobalScope
+    private val timeoutMilliseconds: Long,
+    coroutineScopeToLaunchFlowIn: CoroutineScope
 ) {
 
     private enum class Emission {
@@ -19,17 +20,16 @@ class FlowEmissionRecorder<T>(
     }
 
     private val mutex = Mutex()
-    private var veriefiedEmissions: List<T> = emptyList()
+    private var verifiedEmissions: List<T> = emptyList()
     private val recordedEmissions = ArrayList<T>()
     private val channel: ReceiveChannel<Emission>
 
     init {
-        channel = coroutineScope.produce {
+        channel = coroutineScopeToLaunchFlowIn.produce {
             launch {
                 flowToObserve
                     .collect { emission ->
                         mutex.withLock {
-                            println("original collected $emission")
                             recordedEmissions.add(emission)
                         }
                         this@produce.send(Emission.NEXT_EMISSION_RECEIVED)
@@ -47,23 +47,34 @@ class FlowEmissionRecorder<T>(
         runBlocking {
             launch {
                 val expectedEmissions = mutex.withLock {
-                    veriefiedEmissions + nextEmissions
+                    verifiedEmissions + nextEmissions
                 }
-                
+
                 do {
                     mutex.withLock {
                         if (expectedEmissions.size <= recordedEmissions.size) {
                             val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size)
                             Assert.assertEquals(expectedEmissions, actualEmissions)
-                            veriefiedEmissions = actualEmissions
+                            verifiedEmissions = actualEmissions
                             return@launch
                         }
                     }
-                } while (channel.receive() == Emission.NEXT_EMISSION_RECEIVED)
+
+                    val nextEmissionType = withTimeoutOrNull(timeoutMilliseconds) {
+                        channel.receive()
+                    }
+                    if (nextEmissionType == null) {
+                        val emissionsSoFar = mutex.withLock { ArrayList(recordedEmissions) }
+                        Assert.fail(
+                            "Waiting for $nextEmissions but no new emission within " +
+                                    "${timeoutMilliseconds}ms. Emissions so far: $emissionsSoFar"
+                        )
+                    }
+                } while (nextEmissionType == Emission.NEXT_EMISSION_RECEIVED)
 
 
                 mutex.withLock {
-                    veriefiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
+                    verifiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
                         val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size)
                         Assert.assertEquals(expectedEmissions, actualEmissions)
                         actualEmissions
@@ -76,15 +87,30 @@ class FlowEmissionRecorder<T>(
         }
     }
 
-    private data class RecoringQueryResult<T>(internal val data: List<T>, val completed: Boolean)
-
+    /**
+     * Checks if the next emissions is the given one (or waits for next emission or fails with a timeout)
+     */
     infix fun shouldEmitNext(emission: T) {
         doChecks(listOf(emission))
     }
 
+    /**
+     * Checks if the passed emissions are the given one (or waits for the next emissions or fails with a timeout)
+     */
     fun shouldEmitNext(vararg emissions: T) {
         doChecks(emissions.toList())
     }
 }
 
-fun <T> Flow<T>.record(): FlowEmissionRecorder<T> = FlowEmissionRecorder(this)
+/**
+ * Starts subscribing / collecting the given Flow and records it's emission to verify them later
+ */
+fun <T> Flow<T>.record(
+    emissionTimeoutMilliseconds: Long = 5000,
+    coroutineScopeToLaunchFlowIn: CoroutineScope = GlobalScope
+): FlowEmissionRecorder<T> =
+    FlowEmissionRecorder(
+        flowToObserve = this,
+        timeoutMilliseconds = emissionTimeoutMilliseconds,
+        coroutineScopeToLaunchFlowIn = coroutineScopeToLaunchFlowIn
+    )
