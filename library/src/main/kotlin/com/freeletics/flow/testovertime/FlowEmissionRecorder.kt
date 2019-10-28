@@ -3,7 +3,8 @@ package com.freeletics.flow.testovertime
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.junit.Assert
@@ -20,6 +21,7 @@ class FlowEmissionRecorder<T> internal constructor(
     }
 
     private val mutex = Mutex()
+    private val lock = Any()
     private var verifiedEmissions: List<T> = emptyList()
     private val recordedEmissions = ArrayList<T>()
     private val channel: ReceiveChannel<Emission>
@@ -29,7 +31,7 @@ class FlowEmissionRecorder<T> internal constructor(
             launch {
                 flowToObserve
                     .collect { emission ->
-                        mutex.withLock {
+                        mutex.withLock(lock) {
                             recordedEmissions.add(emission)
                         }
                         this@produce.send(Emission.NEXT_EMISSION_RECEIVED)
@@ -46,12 +48,12 @@ class FlowEmissionRecorder<T> internal constructor(
     private fun doChecks(nextEmissions: List<T>) {
         runBlocking {
             launch {
-                val expectedEmissions = mutex.withLock {
+                val expectedEmissions = mutex.withLock(lock) {
                     verifiedEmissions + nextEmissions
                 }
 
                 do {
-                    mutex.withLock {
+                    mutex.withLock(lock) {
                         if (expectedEmissions.size <= recordedEmissions.size) {
                             val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size)
                             Assert.assertEquals(expectedEmissions, actualEmissions)
@@ -64,7 +66,7 @@ class FlowEmissionRecorder<T> internal constructor(
                         channel.receive()
                     }
                     if (nextEmissionType == null) {
-                        val emissionsSoFar = mutex.withLock { ArrayList(recordedEmissions) }
+                        val emissionsSoFar = mutex.withLock(lock) { ArrayList(recordedEmissions) }
                         Assert.fail(
                             "Waiting for $nextEmissions but no new emission within " +
                                     "${timeoutMilliseconds}ms. Emissions so far: $emissionsSoFar"
@@ -73,7 +75,7 @@ class FlowEmissionRecorder<T> internal constructor(
                 } while (nextEmissionType == Emission.NEXT_EMISSION_RECEIVED)
 
 
-                mutex.withLock {
+                mutex.withLock(lock) {
                     verifiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
                         val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size)
                         Assert.assertEquals(expectedEmissions, actualEmissions)
@@ -107,7 +109,7 @@ class FlowEmissionRecorder<T> internal constructor(
  */
 fun <T> Flow<T>.record(
     emissionTimeoutMilliseconds: Long = 5000,
-    coroutineScopeToLaunchFlowIn: CoroutineScope = GlobalScope
+    coroutineScopeToLaunchFlowIn: CoroutineScope = GlobalScope + Dispatchers.IO
 ): FlowEmissionRecorder<T> =
     FlowEmissionRecorder(
         flowToObserve = this,
