@@ -77,7 +77,7 @@ Coming soon.
 On maven central:
 
 ```gradle
-implementation '"'com.freeletics.flow.test:record:0.1.0'
+implementation 'com.freeletics.flow.test:record:0.1.0'
 ```
 
 ## Snapshot
