@@ -1,5 +1,6 @@
 package com.freeletics.flow.testovertime
 
+import kotlinx.collections.immutable.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
@@ -22,8 +23,8 @@ class FlowEmissionRecorder<T> internal constructor(
 
     private val mutex = Mutex()
     private val lock = Any()
-    private var verifiedEmissions: List<T> = emptyList()
-    private val recordedEmissions = ArrayList<T>()
+    private var verifiedEmissions: PersistentList<T> = persistentListOf()
+    private var recordedEmissions: PersistentList<T> = persistentListOf()
     private val channel: ReceiveChannel<Emission>
 
     init {
@@ -32,7 +33,7 @@ class FlowEmissionRecorder<T> internal constructor(
                 flowToObserve
                     .collect { emission ->
                         mutex.withLock(lock) {
-                            recordedEmissions.add(emission)
+                            recordedEmissions = recordedEmissions.add(emission)
                         }
                         this@produce.send(Emission.NEXT_EMISSION_RECEIVED)
                     }
@@ -55,7 +56,8 @@ class FlowEmissionRecorder<T> internal constructor(
                 do {
                     mutex.withLock(lock) {
                         if (expectedEmissions.size <= recordedEmissions.size) {
-                            val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size)
+                            val actualEmissions: PersistentList<T> =
+                                recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
                             Assert.assertEquals(expectedEmissions, actualEmissions)
                             verifiedEmissions = actualEmissions
                             return@launch
@@ -77,7 +79,7 @@ class FlowEmissionRecorder<T> internal constructor(
 
                 mutex.withLock(lock) {
                     verifiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
-                        val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size)
+                        val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
                         Assert.assertEquals(expectedEmissions, actualEmissions)
                         actualEmissions
                     } else {
