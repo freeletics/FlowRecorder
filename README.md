@@ -77,12 +77,12 @@ Coming soon.
 On maven central:
 
 ```gradle
-implementation 'com.freeletics.flow.test:record:0.1.0'
+implementation 'com.freeletics.flow.test:recorder:0.1.0'
 ```
 
 ## Snapshot
 Latest development snapshot (whatever is on master is published as snapshot):
 
 ```gradle
-implementation 'com.freeletics.flow.test:record:0.1.1-SNAPSHOT'
+implementation 'com.freeletics.flow.test:recorder:0.1.1-SNAPSHOT'
 ```
