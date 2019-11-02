@@ -23,6 +23,8 @@ What this library will do is:
         emissions shouldEmitNext 1
         emissions shouldEmitNext 2
         emissions shouldEmitNext 3 // although this emission happens later, the test execution will wait here until next emission (or fails with timeout)
+   
+        emissions.cleanUp() // releases resources to avoid OutOfMemoryExceptions
     }
     ```
 
@@ -44,7 +46,9 @@ What this library will do is:
         // we don't miss any emissions that happened async. in the meantime. 
         Thread.sleep(1000)
         emissions shouldEmitNext 2
-        emissions shouldEmitNext 3 
+        emissions shouldEmitNext 3
+ 
+        emissions.cleanUp() // releases resources to avoid OutOfMemoryExceptions
     }
     ```
 
@@ -65,6 +69,8 @@ fun shouldEmit_1_2_3(){
     )
     
     emissions.shouldEmitNext(1,2,3) // you can also use this instead of infix
+    
+    emissions.cleanUp() // releases resources to avoid OutOfMemoryExceptions
 }
 ```
 
@@ -77,12 +83,12 @@ Coming soon.
 On maven central:
 
 ```gradle
-implementation 'com.freeletics.flow.test:recorder:0.1.0'
+implementation 'com.freeletics.flow.test:recorder:0.2.0'
 ```
 
 ## Snapshot
 Latest development snapshot (whatever is on master is published as snapshot):
 
 ```gradle
-implementation 'com.freeletics.flow.test:recorder:0.1.1-SNAPSHOT'
+implementation 'com.freeletics.flow.test:recorder:0.2.1-SNAPSHOT'
 ```
