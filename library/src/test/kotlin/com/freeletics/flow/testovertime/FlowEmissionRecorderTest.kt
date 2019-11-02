@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert
 import org.junit.Test
 import java.lang.AssertionError
+import java.lang.IllegalStateException
 import kotlin.system.measureTimeMillis
 
 /**
@@ -21,6 +22,8 @@ class FlowEmissionRecorderTest {
 
         emissions shouldEmitNext 1
         emissions shouldEmitNext 2
+
+        emissions.cleanUp()
     }
 
 
@@ -35,7 +38,14 @@ class FlowEmissionRecorderTest {
             emissions shouldEmitNext 3 // 2 is actually expected
             Assert.fail("AssertionError expected")
         } catch (e: AssertionError) {
-            // TODO should we check for a certain message?
+            val expectedMessage = "expected:<[1, 3]> but was:<[1, 2]>"
+            if (e.message != expectedMessage) {
+                throw e
+            } else {
+                Assert.assertEquals(expectedMessage, e.message)
+            }
+        } finally {
+            emissions.cleanUp()
         }
     }
 
@@ -55,6 +65,8 @@ class FlowEmissionRecorderTest {
         emissions shouldEmitNext 1
         emissions shouldEmitNext 2
         emissions.shouldEmitNext(3, 4)
+
+        emissions.cleanUp()
     }
 
     @Test
@@ -75,6 +87,12 @@ class FlowEmissionRecorderTest {
             emissions shouldEmitNext 2
             Assert.fail("AssertionError expected")
         } catch (e: AssertionError) {
+            val expectedMessage = "expected:<[1, 2]> but was:<[1, 9]>"
+            if (e.message != expectedMessage) {
+                throw e
+            } else {
+                Assert.assertEquals(expectedMessage, e.message)
+            }
         }
     }
 
@@ -92,8 +110,8 @@ class FlowEmissionRecorderTest {
             }.record()
 
             emissions.shouldEmitNext(1, 2)
+            emissions.cleanUp()
         }
-
         Assert.assertTrue(
             "Test execution took too long, most likely because internally something was waiting until last " +
                     "emission and completion. That is not how it's suppose to work.",
@@ -121,6 +139,8 @@ class FlowEmissionRecorderTest {
                 "Waiting for [2] but no new emission within 50ms. " +
                         "Emissions so far: [1]", e.message
             )
+        } finally {
+            emissions.cleanUp()
         }
     }
 
@@ -133,6 +153,8 @@ class FlowEmissionRecorderTest {
             Assert.fail("Exception expected")
         } catch (e: AssertionError) {
             Assert.assertEquals("expected:<[1]> but was:<[]>", e.message)
+        } finally {
+            emission1.cleanUp()
         }
 
         val emission2 = flow<Int> {}
@@ -142,6 +164,25 @@ class FlowEmissionRecorderTest {
             Assert.fail("Exception expected")
         } catch (e: AssertionError) {
             Assert.assertEquals("expected:<[1]> but was:<[]>", e.message)
+        } finally {
+            emission2.cleanUp()
+        }
+    }
+
+    @Test
+    fun `more verification after clea up throws Exception`() {
+        val emission = flowOf(1, 2)
+            .record()
+
+        emission shouldEmitNext 1
+        emission.cleanUp()
+
+        try {
+            emission shouldEmitNext 2
+            Assert.fail("Exception expected")
+        } catch (e: IllegalStateException) {
+            val expectedMessage = ".cleanUp() already called. No more assertions allowed."
+            Assert.assertEquals(expectedMessage, e.message)
         }
     }
 }
