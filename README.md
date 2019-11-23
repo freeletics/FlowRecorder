@@ -24,7 +24,7 @@ What this library will do is:
         emissions shouldEmitNext 2
         emissions shouldEmitNext 3 // although this emission happens later, the test execution will wait here until next emission (or fails with timeout)
    
-        emissions.cleanUp() // releases resources to avoid OutOfMemoryExceptions
+        emissions.stopRecordingAndCleanUp() // releases resources to avoid OutOfMemoryExceptions
     }
     ```
 
@@ -48,7 +48,7 @@ What this library will do is:
         emissions shouldEmitNext 2
         emissions shouldEmitNext 3
  
-        emissions.cleanUp() // releases resources to avoid OutOfMemoryExceptions
+        emissions.stopRecordingAndCleanUp() // releases resources to avoid OutOfMemoryExceptions
     }
     ```
 
@@ -70,7 +70,7 @@ fun shouldEmit_1_2_3(){
     
     emissions.shouldEmitNext(1,2,3) // you can also use this instead of infix
     
-    emissions.cleanUp() // releases resources to avoid OutOfMemoryExceptions
+    emissions.stopRecordingAndCleanUp() // releases resources to avoid OutOfMemoryExceptions
 }
 ```
 

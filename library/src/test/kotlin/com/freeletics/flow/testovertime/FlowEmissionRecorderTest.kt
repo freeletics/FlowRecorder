@@ -6,8 +6,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert
 import org.junit.Test
-import java.lang.AssertionError
-import java.lang.IllegalStateException
 import kotlin.system.measureTimeMillis
 
 /**
@@ -23,7 +21,7 @@ class FlowEmissionRecorderTest {
         emissions shouldEmitNext 1
         emissions shouldEmitNext 2
 
-        emissions.cleanUp()
+        emissions.stopRecordingAndCleanUp()
     }
 
 
@@ -45,7 +43,7 @@ class FlowEmissionRecorderTest {
                 Assert.assertEquals(expectedMessage, e.message)
             }
         } finally {
-            emissions.cleanUp()
+            emissions.stopRecordingAndCleanUp()
         }
     }
 
@@ -66,7 +64,7 @@ class FlowEmissionRecorderTest {
         emissions shouldEmitNext 2
         emissions.shouldEmitNext(3, 4)
 
-        emissions.cleanUp()
+        emissions.stopRecordingAndCleanUp()
     }
 
     @Test
@@ -110,7 +108,7 @@ class FlowEmissionRecorderTest {
             }.record()
 
             emissions.shouldEmitNext(1, 2)
-            emissions.cleanUp()
+            emissions.stopRecordingAndCleanUp()
         }
         Assert.assertTrue(
             "Test execution took too long, most likely because internally something was waiting until last " +
@@ -140,7 +138,7 @@ class FlowEmissionRecorderTest {
                         "Emissions so far: [1]", e.message
             )
         } finally {
-            emissions.cleanUp()
+            emissions.stopRecordingAndCleanUp()
         }
     }
 
@@ -154,7 +152,7 @@ class FlowEmissionRecorderTest {
         } catch (e: AssertionError) {
             Assert.assertEquals("expected:<[1]> but was:<[]>", e.message)
         } finally {
-            emission1.cleanUp()
+            emission1.stopRecordingAndCleanUp()
         }
 
         val emission2 = flow<Int> {}
@@ -165,7 +163,7 @@ class FlowEmissionRecorderTest {
         } catch (e: AssertionError) {
             Assert.assertEquals("expected:<[1]> but was:<[]>", e.message)
         } finally {
-            emission2.cleanUp()
+            emission2.stopRecordingAndCleanUp()
         }
     }
 
@@ -175,7 +173,7 @@ class FlowEmissionRecorderTest {
             .record()
 
         emission shouldEmitNext 1
-        emission.cleanUp()
+        emission.stopRecordingAndCleanUp()
 
         try {
             emission shouldEmitNext 2

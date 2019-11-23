@@ -1,13 +1,15 @@
 package com.freeletics.flow.testovertime
 
-import kotlinx.collections.immutable.*
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.junit.Assert
 
 /**
@@ -18,7 +20,7 @@ import org.junit.Assert
  * Use [shouldEmitNext] to do assertions. Internally we use .equals() to check if the emission is
  * the expected one.
  *
- * Use [cleanUp] once you are done with recording and verifying to clean up resources to avoid
+ * Use [stopRecordingAndCleanUp] once you are done with recording and verifying to clean up resources to avoid
  * memory leaks.
  *
  */
@@ -37,8 +39,8 @@ class FlowEmissionRecorder<T> internal constructor(
     //  mutal exclusive to a given lambda block but not as a semaphore to an entire lock.
     //  we need to reverify if this lock is actually needed in combincation with PersistenList
     //  or can be removed entirely.
-    private val mutex = Mutex()
-    private val lock = Any()
+    //private val mutex = Mutex()
+    // private val lock = Any()
     private var verifiedEmissions: PersistentList<T> = persistentListOf()
     private var recordedEmissions: PersistentList<T> = persistentListOf()
     private val channel: ReceiveChannel<Emission>
@@ -47,19 +49,19 @@ class FlowEmissionRecorder<T> internal constructor(
     private var cleanedUp = false
 
     init {
-        // TODO verify if we should move this to actor.
         channel = coroutineScopeToLaunchFlowIn.produce {
             observingFlowJob = launch {
                 flowToObserve
                     .collect { emission ->
-                        mutex.withLock(lock) {
-                            recordedEmissions = recordedEmissions.add(emission)
-                        }
+                        //mutex.withLock(lock) {
+                        recordedEmissions = recordedEmissions.add(emission)
+                        // }
                         this@produce.send(Emission.NEXT_EMISSION_RECEIVED)
                     }
 
                 // done with channel emissions
-                this@produce.send(Emission.NO_MORE_EMISSIONS)
+                // TODO should no more emissions be called?
+                // this@produce.send(Emission.NO_MORE_EMISSIONS)
             }
         }
     }
@@ -72,26 +74,35 @@ class FlowEmissionRecorder<T> internal constructor(
         }
         runBlocking {
             doCheckJob = launch {
-                val expectedEmissions = mutex.withLock(lock) {
+                val expectedEmissions = //mutex.withLock(lock) {
                     verifiedEmissions + nextEmissions
-                }
+                //}
 
+                // TODO verify if we should move this to actor.
                 do {
-                    mutex.withLock(lock) {
-                        if (expectedEmissions.size <= recordedEmissions.size) {
-                            val actualEmissions: PersistentList<T> =
-                                recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
-                            Assert.assertEquals(expectedEmissions, actualEmissions)
-                            verifiedEmissions = actualEmissions
-                            return@launch
-                        }
+                    //mutex.withLock(lock) {
+                    if (expectedEmissions.size <= recordedEmissions.size) {
+                        val actualEmissions: PersistentList<T> =
+                            recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
+                        Assert.assertEquals(expectedEmissions, actualEmissions)
+                        verifiedEmissions = actualEmissions
+                        return@launch
                     }
+                    // }
 
                     val nextEmissionType = withTimeoutOrNull(timeoutMilliseconds) {
-                        channel.receive()
+                        if (channel.isClosedForReceive) {
+                            Emission.NO_MORE_EMISSIONS
+                        } else {
+                            try {
+                                channel.receive()
+                            } catch (e: ClosedReceiveChannelException) {
+                                Emission.NO_MORE_EMISSIONS
+                            }
+                        }
                     }
                     if (nextEmissionType == null) {
-                        val emissionsSoFar = mutex.withLock(lock) { ArrayList(recordedEmissions) }
+                        val emissionsSoFar = /* mutex.withLock(lock) { */ ArrayList(recordedEmissions) // }
                         Assert.fail(
                             "Waiting for $nextEmissions but no new emission within " +
                                     "${timeoutMilliseconds}ms. Emissions so far: $emissionsSoFar"
@@ -99,16 +110,16 @@ class FlowEmissionRecorder<T> internal constructor(
                     }
                 } while (nextEmissionType == Emission.NEXT_EMISSION_RECEIVED)
 
-                mutex.withLock(lock) {
-                    verifiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
-                        val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
-                        Assert.assertEquals(expectedEmissions, actualEmissions)
-                        actualEmissions
-                    } else {
-                        Assert.assertEquals(expectedEmissions, recordedEmissions)
-                        recordedEmissions
-                    }
+                //mutex.withLock(lock) {
+                verifiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
+                    val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
+                    Assert.assertEquals(expectedEmissions, actualEmissions)
+                    actualEmissions
+                } else {
+                    Assert.assertEquals(expectedEmissions, recordedEmissions)
+                    recordedEmissions
                 }
+                // }
             }
         }
     }
@@ -137,7 +148,7 @@ class FlowEmissionRecorder<T> internal constructor(
      * You must call this to avoid running out of memory if you have tons and tons of tests going
      * on at the same time
      */
-    fun cleanUp() {
+    fun stopRecordingAndCleanUp() {
         cleanedUp = true
         observingFlowJob.cancel()
         doCheckJob?.cancel()
