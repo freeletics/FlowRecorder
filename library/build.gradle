@@ -25,8 +25,6 @@ dependencies {
     implementation testLibraries.junit
 
     testImplementation testLibraries.junit
-    testImplementation 'com.freeletics.flowredux:flowredux:0.2.0-SNAPSHOT'
-    testImplementation 'com.freeletics.flowredux:flowredux-dsl:0.2.0-SNAPSHOT'
 }
 
 sourceCompatibility = "1.7"
