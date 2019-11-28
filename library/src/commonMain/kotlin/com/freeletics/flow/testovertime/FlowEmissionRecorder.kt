@@ -4,13 +4,17 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import kotlinx.collections.immutable.toPersistentList
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import org.junit.Assert
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.test.DefaultAsserter
 
 /**
  * This class records emissions of Flow type.
@@ -84,7 +88,7 @@ class FlowEmissionRecorder<T> internal constructor(
                     if (expectedEmissions.size <= recordedEmissions.size) {
                         val actualEmissions: PersistentList<T> =
                             recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
-                        Assert.assertEquals(expectedEmissions, actualEmissions)
+                        assertEquals(expectedEmissions, actualEmissions)
                         verifiedEmissions = actualEmissions
                         return@launch
                     }
@@ -103,7 +107,7 @@ class FlowEmissionRecorder<T> internal constructor(
                     }
                     if (nextEmissionType == null) {
                         val emissionsSoFar = /* mutex.withLock(lock) { */ ArrayList(recordedEmissions) // }
-                        Assert.fail(
+                        DefaultAsserter.fail(
                             "Waiting for $nextEmissions but no new emission within " +
                                     "${timeoutMilliseconds}ms. Emissions so far: $emissionsSoFar"
                         )
@@ -113,15 +117,19 @@ class FlowEmissionRecorder<T> internal constructor(
                 //mutex.withLock(lock) {
                 verifiedEmissions = if (expectedEmissions.size <= recordedEmissions.size) {
                     val actualEmissions = recordedEmissions.subList(0, expectedEmissions.size).toPersistentList()
-                    Assert.assertEquals(expectedEmissions, actualEmissions)
+                    assertEquals(expectedEmissions, actualEmissions)
                     actualEmissions
                 } else {
-                    Assert.assertEquals(expectedEmissions, recordedEmissions)
+                    assertEquals(expectedEmissions, recordedEmissions)
                     recordedEmissions
                 }
                 // }
             }
         }
+    }
+
+    private fun assertEquals(expected: Any, actual: Any) {
+        DefaultAsserter.assertEquals("Expected: $expected\nActual: $actual", expected, actual)
     }
 
     /**

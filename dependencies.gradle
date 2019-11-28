@@ -4,14 +4,14 @@ ext.versions = [
         coroutines  : '1.3.2',
         immutable   : '0.3',
         junit       : '4.12',
-        kotlin      : '1.3.60'
+        kotlin      : '1.3.50'
 ]
 
 ext.libraries = [
         kotlinStdlib      : "org.jetbrains.kotlin:kotlin-stdlib:$versions.kotlin",
         kotlinStdLibCommon: "org.jetbrains.kotlin:kotlin-stdlib-common:$versions.kotlin",
         coroutines        : "org.jetbrains.kotlinx:kotlinx-coroutines-core:$versions.coroutines",
-        immutable         : "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:$versions.immutable"
+        immutable         : "org.jetbrains.kotlinx:kotlinx-collections-immutable:$versions.immutable"
 ]
 
 ext.testLibraries = [
