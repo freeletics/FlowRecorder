@@ -1,3 +1,7 @@
+# Deprecated
+
+We've stopped maintaining this library. Check out [Turbine](https://github.com/cashapp/turbine) as an alternative.
+
 # Flow Emission Recorder
 
 This library helps to record emissions of kotlin `Flow` type over time.
